@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Returning to Yiji</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><a href="./">Yiji</a></header>
+<main>
+  <h1>Returning to Yiji…</h1>
+  <p id="status" role="status">Taking you back to your local Yiji app.</p>
+  <p><a id="manual" class="button" hidden>Continue to Yiji</a></p>
+  <noscript><p>JavaScript is required to return to your local Yiji app.</p></noscript>
+</main>
+<script>
+  // The bank redirects here because Enable Banking only allows https redirect URLs. Yiji runs on
+  // loopback, so we relay the query to http://127.0.0.1:<port>, with the port taken from `state`
+  // ("<port>.<nonce>", set by the app). Only loopback targets are possible: no open redirect.
+  (function () {
+    var state = new URLSearchParams(window.location.search).get("state") || "";
+    var match = /^(\d{1,5})\.[A-Za-z0-9_-]{16,128}$/.exec(state);
+    var port = match ? Number(match[1]) : 0;
+    if (port < 1 || port > 65535) {
+      document.getElementById("status").textContent =
+        "This link is not a valid Yiji bank callback. Start the connection again from Yiji.";
+      return;
+    }
+    var target = "http://127.0.0.1:" + port + "/api/bank/callback" + window.location.search;
+    var manual = document.getElementById("manual");
+    manual.href = target;
+    manual.hidden = false;
+    window.location.replace(target);
+  })();
+</script>
+<footer class="muted"><a href="./">Home</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></footer>
+</body>
+</html>
