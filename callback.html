@@ -17,11 +17,12 @@
 <script>
   // The bank redirects here because Enable Banking only allows https redirect URLs. Yiji runs on
   // loopback, so we relay the query to http://127.0.0.1:<port>, with the port taken from `state`
-  // ("<port>.<nonce>", set by the app). Only loopback targets are possible: no open redirect.
+  // ("<port>.<nonce>", see app/banking/state.py). Only loopback targets: no open redirect.
+  // The pattern and path below mirror STATE_PATTERN and CALLBACK_PATH (tests/unit/test_site.py).
   (function () {
     var state = new URLSearchParams(window.location.search).get("state") || "";
-    var match = /^(\d{1,5})\.[A-Za-z0-9_-]{16,128}$/.exec(state);
-    var port = match ? Number(match[1]) : 0;
+    var valid = /^\d{1,5}\.[A-Za-z0-9_-]{16,128}$/.test(state);
+    var port = valid ? Number(state.split(".")[0]) : 0;
     if (port < 1 || port > 65535) {
       document.getElementById("status").textContent =
         "This link is not a valid Yiji bank callback. Start the connection again from Yiji.";
