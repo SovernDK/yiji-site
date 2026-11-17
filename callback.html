@@ -10,29 +10,42 @@
 <header><a href="./">Yiji</a></header>
 <main>
   <h1>Returning to Yiji…</h1>
-  <p id="status" role="status">Taking you back to your local Yiji app.</p>
+  <p id="status" role="status">Taking you back to Yiji.</p>
   <p><a id="manual" class="button" hidden>Continue to Yiji</a></p>
-  <noscript><p>JavaScript is required to return to your local Yiji app.</p></noscript>
+  <noscript><p>JavaScript is required to return to Yiji.</p></noscript>
 </main>
 <script>
-  // The bank redirects here because Enable Banking only allows https redirect URLs. Yiji runs on
-  // loopback, so we relay the query to http://127.0.0.1:<port>, with the port taken from `state`
-  // ("<port>.<nonce>", see app/banking/state.py). Only loopback targets: no open redirect.
+  // The bank redirects here because Enable Banking only allows https redirect URLs. `state` is
+  // "<target>.<nonce>" (see app/banking/state.py): the target is either the port of a Yiji on
+  // this machine (relayed to http://127.0.0.1:<port>) or the base64url https origin of a Yiji on a
+  // server. Only those two shapes and a fixed path are allowed, so this is no open redirect.
   // The pattern and path below mirror STATE_PATTERN and CALLBACK_PATH (tests/unit/test_site.py).
   (function () {
     var state = new URLSearchParams(window.location.search).get("state") || "";
-    var valid = /^\d{1,5}\.[A-Za-z0-9_-]{16,128}$/.test(state);
-    var port = valid ? Number(state.split(".")[0]) : 0;
-    if (port < 1 || port > 65535) {
+    var valid = /^(\d{1,5}|[A-Za-z0-9_-]{8,400})\.[A-Za-z0-9_-]{16,128}$/.test(state);
+    var target = valid ? state.split(".")[0] : "";
+    var origin = "";
+    if (/^\d+$/.test(target)) {
+      var port = Number(target);
+      origin = port >= 1 && port <= 65535 ? "http://127.0.0.1:" + port : "";
+    } else if (target) {
+      try {
+        var decoded = atob(target.replace(/-/g, "+").replace(/_/g, "/"));
+        origin = /^https:\/\/[a-z0-9.-]+(:\d{1,5})?$/.test(decoded) ? decoded : "";
+      } catch (error) {
+        origin = "";
+      }
+    }
+    if (!origin) {
       document.getElementById("status").textContent =
         "This link is not a valid Yiji bank callback. Start the connection again from Yiji.";
       return;
     }
-    var target = "http://127.0.0.1:" + port + "/api/bank/callback" + window.location.search;
+    var destination = origin + "/api/bank/callback" + window.location.search;
     var manual = document.getElementById("manual");
-    manual.href = target;
+    manual.href = destination;
     manual.hidden = false;
-    window.location.replace(target);
+    window.location.replace(destination);
   })();
 </script>
 <footer class="muted"><a href="./">Home</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></footer>
